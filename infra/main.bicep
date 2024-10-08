@@ -1,25 +1,33 @@
-// main.bicep
+@minLength(3)
+@maxLength(11)
+param storagePrefix string
+
+@allowed([
+  'Standard_LRS'
+  'Standard_GRS'
+  'Standard_RAGRS'
+  'Standard_ZRS'
+  'Premium_LRS'
+  'Premium_ZRS'
+  'Standard_GZRS'
+  'Standard_RAGZRS'
+])
+param storageSKU string = 'Standard_LRS'
 
 param location string = resourceGroup().location
-param acrName string
-param rgName string
 
-resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
-  name: rgName
-  location: location
-}
+var uniqueStorageName = '${storagePrefix}${uniqueString(resourceGroup().id)}'
 
-resource acr 'Microsoft.ContainerRegistry/registries@2021-09-01' = {
-  name: acrName
+resource stg 'Microsoft.Storage/storageAccounts@2023-04-01' = {
+  name: uniqueStorageName
   location: location
   sku: {
-    name: 'Basic'
+    name: storageSKU
   }
+  kind: 'StorageV2'
   properties: {
-    adminUserEnabled: true
+    supportsHttpsTrafficOnly: true
   }
 }
 
-output acrLoginServer string = acr.properties.loginServer
-output acrAdminUsername string = listCredentials(acr.id, '2021-09-01').username
-output acrAdminPassword string = listCredentials(acr.id, '2021-09-01').passwords[0].value
+output storageEndpoint object = stg.properties.primaryEndpoints
